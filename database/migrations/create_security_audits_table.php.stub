@@ -1,0 +1,27 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up()
+    {
+        Schema::create('security_audits', function (Blueprint $table) {
+            $table->id();
+            $table->string('type');
+            $table->string('source');
+            $table->json('results')->nullable();
+            $table->integer('vulnerabilities_count')->default(0);
+            $table->integer('outdated_count')->default(0);
+            $table->boolean('has_issues')->default(false);
+            $table->text('raw_output')->nullable();
+            $table->timestamp('executed_at');
+            $table->timestamps();
+
+            $table->index(['type', 'source', 'created_at']);
+            $table->index('has_issues');
+        });
+    }
+};

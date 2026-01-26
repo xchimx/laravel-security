@@ -1,69 +1,206 @@
-# :package_description
+# Laravel Security Package
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/:vendor_slug/:package_slug.svg?style=flat-square)](https://packagist.org/packages/:vendor_slug/:package_slug)
-[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/:vendor_slug/:package_slug/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/:vendor_slug/:package_slug/actions?query=workflow%3Arun-tests+branch%3Amain)
-[![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/:vendor_slug/:package_slug/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/:vendor_slug/:package_slug/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
-[![Total Downloads](https://img.shields.io/packagist/dt/:vendor_slug/:package_slug.svg?style=flat-square)](https://packagist.org/packages/:vendor_slug/:package_slug)
-<!--delete-->
----
-This repo can be used to scaffold a Laravel package. Follow these steps to get started:
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/xchimx/laravel-security.svg?style=flat-square)](https://packagist.org/packages/xchimx/laravel-security)
+[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/xchimx/laravel-security/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/xchimx/laravel-security/actions?query=workflow%3Arun-tests+branch%3Amain)
+[![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/xchimx/laravel-security/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/xchimx/laravel-security/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
+[![Total Downloads](https://img.shields.io/packagist/dt/xchimx/laravel-security.svg?style=flat-square)](https://packagist.org/packages/xchimx/laravel-security)
 
-1. Press the "Use this template" button at the top of this repo to create a new repo with the contents of this skeleton.
-2. Run "php ./configure.php" to run a script that will replace all placeholders throughout all the files.
-3. Have fun creating your package.
-4. If you need help creating a package, consider picking up our <a href="https://laravelpackage.training">Laravel Package Training</a> video course.
----
-<!--/delete-->
-This is where your description should go. Limit it to a paragraph or two. Consider adding a small example.
+![](resources/images/logo.png)
 
-## Support us
-
-[<img src="https://github-ads.s3.eu-central-1.amazonaws.com/:package_name.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/:package_name)
-
-We invest a lot of resources into creating [best in class open source packages](https://spatie.be/open-source). You can support us by [buying one of our paid products](https://spatie.be/open-source/support-us).
-
-We highly appreciate you sending us a postcard from your hometown, mentioning which of our package(s) you are using. You'll find our address on [our contact page](https://spatie.be/about-us). We publish all received postcards on [our virtual postcard wall](https://spatie.be/open-source/postcards).
+A Laravel package for automated monitoring of security vulnerabilities and outdated packages in Composer and NPM dependencies.
 
 ## Installation
 
 You can install the package via composer:
 
 ```bash
-composer require :vendor_slug/:package_slug
+composer require xchimx/laravel-security
 ```
 
 You can publish and run the migrations with:
 
 ```bash
-php artisan vendor:publish --tag=":package_slug-migrations"
+php artisan vendor:publish --tag="security-migrations"
 php artisan migrate
 ```
 
 You can publish the config file with:
 
 ```bash
-php artisan vendor:publish --tag=":package_slug-config"
+php artisan vendor:publish --tag="security-config"
 ```
 
-This is the contents of the published config file:
+Customize the `config/security.php` file according to your requirements or set the corresponding ENV variables:
 
-```php
-return [
-];
+```env
+# App Info
+APP_NAME=MyApp
+APP_URL=https://myapp.com
+
+# Security Audit
+SECURITY_AUDIT_ENABLED=true
+SECURITY_AUDIT_TIME=02:00
+SECURITY_AUDIT_COMPOSER=true
+SECURITY_AUDIT_NPM=true
+
+# Outdated Checks
+SECURITY_OUTDATED_ENABLED=true
+SECURITY_OUTDATED_TIME=03:00
+SECURITY_OUTDATED_COMPOSER=true
+SECURITY_OUTDATED_NPM=true
+
+# Notifications
+SECURITY_NOTIFY_USER_ID=1
+SECURITY_NOTIFICATIONS_USER_MODEL=App\Models\User
+SECURITY_NOTIFICATIONS_ROUTE=admin.security
+SECURITY_NOTIFY_MAIL=true
+SECURITY_NOTIFY_DATABASE=true
+SECURITY_NOTIFY_SLACK=false
+SECURITY_MAIL_TO=admin@example.com
+SLACK_BOT_USER_OAUTH_TOKEN=xxx-xxx-xxx
+SLACK_BOT_USER_DEFAULT_CHANNEL="#security-alerts"
 ```
 
 Optionally, you can publish the views using
 
 ```bash
-php artisan vendor:publish --tag=":package_slug-views"
+php artisan vendor:publish --tag="security-views"
 ```
+
+Note: In Laravel 10, you need to add this to your `config/services.php` file.
+
+```bash
+    'slack' => [
+        'notifications' => [
+            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
+            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
+        ],
+    ],
+```
+
+and probably:
+```bash
+composer require laravel/slack-notification-channel
+```
+
 
 ## Usage
 
-```php
-$variable = new VendorName\Skeleton();
-echo $variable->echoPhrase('Hello, VendorName!');
+The package automatically registers the following tasks in the Laravel Scheduler:
+
+- **Security Audit**: Daily at 02:00 (configurable)
+- **Outdated Check**: Weekly on Mondays at 3:00 a.m. (configurable)
+
+Ensure that the Laravel Scheduler is running:
+
+```bash
+* * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1
 ```
+
+### Manual Usage
+
+```bash
+# Perform security audit
+php artisan security:audit
+
+# Check Composer only
+php artisan security:audit --composer
+
+# Check NPM only
+php artisan security:audit --npm
+
+# Check for outdated packages
+php artisan security:outdated
+
+# Check Composer only
+php artisan security:outdated --composer
+
+# Check NPM only
+php artisan security:outdated --npm
+```
+
+### Dashboard Component
+
+Integrate the Security Dashboard Component into your Blade views:
+
+```blade
+<x-security-security-dashboard />
+```
+
+### Programmatic Access
+
+```php
+use Xchimx\LaravelSecurity\Models\SecurityAudit;
+
+// Retrieve latest Composer audit
+$audit = SecurityAudit::getLatestAudit('composer');
+
+// Latest outdated check for NPM
+$outdated = SecurityAudit::getLatestOutdated('npm');
+
+// All audits with issuesen
+$issues = SecurityAudit::withIssues()->get();
+
+// Audits from the last 7 days
+$recent = SecurityAudit::where('executed_at', '>=', now()->subDays(7))->get();
+```
+
+## Notifications
+
+### Database notifications
+
+Database notifications are sent to the user ID configured in `SECURITY_NOTIFY_USER_ID`. If the user has an email address, the notification is also sent to that address
+
+```env
+SECURITY_NOTIFY_USER_ID=1
+```
+
+### Email notifications
+
+Emails are sent to the address configured in `SECURITY_MAIL_TO`. You can separate multiple addresses with commas:
+
+```env
+SECURITY_MAIL_TO=admin@example.com,security@example.com
+```
+
+### Slack notifications
+
+Configure your Slack token:
+
+```env
+SECURITY_NOTIFY_SLACK=true
+SLACK_BOT_USER_OAUTH_TOKEN=xxx-xxx-xxx
+SLACK_BOT_USER_DEFAULT_CHANNEL="#security-alerts"
+```
+
+### Database notifications
+
+When database notifications are enabled, notifications are stored in the `notifications` table. This requires the standard Laravel notifications migration:
+
+```bash
+php artisan notifications:table
+php artisan migrate
+```
+
+## Data model
+
+The `security_audits` table stores:
+
+- `type`: 'audit' or 'outdated'
+- `source`: 'composer' or 'npm'
+- `results`: JSON with details about the issues found
+- `vulnerabilities_count`: Number of security vulnerabilities
+- `outdated_count`: Number of outdated packages
+- `has_issues`: Boolean flag
+- `raw_output`: Raw output of the command
+- `executed_at`: Time of execution
+
+## Requirements
+
+- PHP ^8.3
+- Laravel ^12.0
+- Composer (auf dem Server installiert)
+- NPM (optional, wenn NPM-Packages geprüft werden sollen)
 
 ## Testing
 
@@ -75,19 +212,24 @@ composer test
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
 
-## Contributing
-
-Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
-
-## Security Vulnerabilities
-
-Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
-
 ## Credits
 
-- [:author_name](https://github.com/:author_username)
-- [All Contributors](../../contributors)
+- [Tobias Schottstädt](https://www.schottstaedt.net)
 
 ## License
 
 The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+
+## Views
+
+Dashboard
+![](resources/images/dashboard.png)
+
+Mail Notification
+![](resources/images/mail.png)
+
+Slack Notification Audit
+![](resources/images/slack_audit.png)
+
+Slack Notification Outdated
+![](resources/images/slack_outdated.png)

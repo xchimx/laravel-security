@@ -1,47 +1,54 @@
 {
-    "name": ":vendor_slug/:package_slug",
-    "description": ":package_description",
+    "name": "xchimx/laravel-security",
+    "description": "A package that monitors composer/npm packages",
     "keywords": [
-        ":vendor_name",
+        "xchimx",
         "laravel",
-        ":package_slug"
+        "laravel-security",
+        "laravel",
+        "security",
+        "audit",
+        "composer",
+        "npm",
+        "vulnerability"
     ],
-    "homepage": "https://github.com/:vendor_slug/:package_slug",
+    "homepage": "https://github.com/xchimx/laravel-security",
     "license": "MIT",
     "authors": [
         {
-            "name": ":author_name",
-            "email": "author@domain.com",
+            "name": "Tobias Schottstädt",
+            "email": "code@schottstaedt.net",
             "role": "Developer"
         }
     ],
     "require": {
-        "php": "^8.4",
-        "spatie/laravel-package-tools": "^1.16",
-        "illuminate/contracts": "^11.0||^12.0"
+        "php": "^8.3",
+        "illuminate/contracts": "^12.0",
+        "illuminate/support": "^12.0",
+        "laravel/slack-notification-channel": "^3.0",
+        "spatie/laravel-package-tools": "^1.16"
     },
     "require-dev": {
-        "laravel/pint": "^1.14",
-        "nunomaduro/collision": "^8.8",
         "larastan/larastan": "^3.0",
-        "orchestra/testbench": "^10.0.0||^9.0.0",
+        "laravel/pint": "^1.14",
+        "nunomaduro/collision": "^8.0",
+        "orchestra/testbench": "^10.0",
         "pestphp/pest": "^4.0",
         "pestphp/pest-plugin-arch": "^4.0",
         "pestphp/pest-plugin-laravel": "^4.0",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan-deprecation-rules": "^2.0",
-        "phpstan/phpstan-phpunit": "^2.0",
-        "spatie/laravel-ray": "^1.35"
+        "phpstan/phpstan-phpunit": "^2.0"
     },
     "autoload": {
         "psr-4": {
-            "VendorName\\Skeleton\\": "src/",
-            "VendorName\\Skeleton\\Database\\Factories\\": "database/factories/"
+            "Xchimx\\LaravelSecurity\\": "src/",
+            "Xchimx\\LaravelSecurity\\Database\\Factories\\": "database/factories/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "VendorName\\Skeleton\\Tests\\": "tests/",
+            "Xchimx\\LaravelSecurity\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/"
         }
     },
@@ -63,10 +70,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "VendorName\\Skeleton\\SkeletonServiceProvider"
+                "Xchimx\\LaravelSecurity\\LaravelSecurityServiceProvider"
             ],
             "aliases": {
-                "Skeleton": "VendorName\\Skeleton\\Facades\\Skeleton"
+                "LaravelSecurity": "Xchimx\\LaravelSecurity\\Facades\\LaravelSecurity"
             }
         }
     },
