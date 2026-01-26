@@ -67,23 +67,6 @@ Optionally, you can publish the views using
 php artisan vendor:publish --tag="security-views"
 ```
 
-Note: In Laravel 10, you need to add this to your `config/services.php` file.
-
-```bash
-    'slack' => [
-        'notifications' => [
-            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
-            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
-        ],
-    ],
-```
-
-and probably:
-```bash
-composer require laravel/slack-notification-channel
-```
-
-
 ## Usage
 
 The package automatically registers the following tasks in the Laravel Scheduler:
@@ -199,8 +182,8 @@ The `security_audits` table stores:
 
 - PHP ^8.3
 - Laravel ^12.0
-- Composer (auf dem Server installiert)
-- NPM (optional, wenn NPM-Packages geprüft werden sollen)
+- Composer (installed on the server)
+- NPM (Optional if NPM packages are to be checked)
 
 ## Testing
 
