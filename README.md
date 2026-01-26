@@ -180,8 +180,8 @@ The `security_audits` table stores:
 
 ## Requirements
 
-- PHP ^8.3
-- Laravel ^12.0
+- PHP ^8.2
+- Laravel ^11.0
 - Composer (installed on the server)
 - NPM (Optional if NPM packages are to be checked)
 
