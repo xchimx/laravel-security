@@ -49,6 +49,7 @@ return [
         'channels' => [
             'mail' => env('SECURITY_NOTIFY_MAIL', true),
             'database' => env('SECURITY_NOTIFY_DATABASE', true),
+            'database_mail' => env('SECURITY_NOTIFY_DATABASE_MAIL', true),
             'slack' => env('SECURITY_NOTIFY_SLACK', false),
         ],
 
