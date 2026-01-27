@@ -55,6 +55,7 @@ SECURITY_NOTIFICATIONS_USER_MODEL=App\Models\User
 SECURITY_NOTIFICATIONS_ROUTE=admin.security
 SECURITY_NOTIFY_MAIL=true
 SECURITY_NOTIFY_DATABASE=true
+SECURITY_NOTIFY_DATABASE_MAIL=false
 SECURITY_NOTIFY_SLACK=false
 SECURITY_MAIL_TO=admin@example.com
 SLACK_BOT_USER_OAUTH_TOKEN=xxx-xxx-xxx
@@ -148,11 +149,23 @@ $recent = SecurityAudit::where('executed_at', '>=', now()->subDays(7))->get();
 
 ### Database notifications
 
-Database notifications are sent to the user ID configured in `SECURITY_NOTIFY_USER_ID`. If the user has an email address, the notification is also sent to that address
+Database notifications are sent to the user ID configured in `SECURITY_NOTIFY_USER_ID`. If the user has an email address and `SECURITY_NOTIFY_DATABASE_MAIL` is set to `true`, the notification is also sent to that address
+
+When database notifications are enabled, notifications are stored in the `notifications` table. This requires the standard Laravel notifications migration:
 
 ```env
-SECURITY_NOTIFY_USER_ID=1
+SECURITY_NOTIFY_USER_ID=1 #User ID
+SECURITY_NOTIFICATIONS_USER_MODEL=App\Models\User #User Model
+SECURITY_NOTIFY_DATABASE=true #Set database notification to enabled
+SECURITY_NOTIFY_DATABASE_MAIL=false #User receives database notification without email. Set to “true” if an email should also be sent.
 ```
+
+```bash
+php artisan notifications:table
+php artisan migrate
+```
+
+
 
 ### Email notifications
 
@@ -170,15 +183,6 @@ Configure your Slack token:
 SECURITY_NOTIFY_SLACK=true
 SLACK_BOT_USER_OAUTH_TOKEN=xxx-xxx-xxx
 SLACK_BOT_USER_DEFAULT_CHANNEL="#security-alerts"
-```
-
-### Database notifications
-
-When database notifications are enabled, notifications are stored in the `notifications` table. This requires the standard Laravel notifications migration:
-
-```bash
-php artisan notifications:table
-php artisan migrate
 ```
 
 ## Data model

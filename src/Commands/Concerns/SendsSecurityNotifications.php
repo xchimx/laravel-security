@@ -12,7 +12,7 @@ trait SendsSecurityNotifications
     /**
      * @var array<int, string>
      */
-    private array $allowedChannels = ['mail', 'database', 'slack'];
+    private array $allowedChannels = ['mail', 'database', 'database_mail', 'slack'];
 
     /**
      * @param  callable(array<int, string>): Notification  $makeNotification
@@ -46,7 +46,7 @@ trait SendsSecurityNotifications
             $channels[] = 'database';
         }
 
-        if (($config['mail'] ?? false) === true) {
+        if (($config['database_mail'] ?? false) === true) {
             $channels[] = 'mail';
         }
 
