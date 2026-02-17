@@ -2,6 +2,11 @@
 
 All notable changes to `laravel-security` will be documented in this file.
 
+## Laravel-Security v.1.2 - 2026-02-17
+
+- removes useless migration
+- adds migration down
+
 ## Laravel-Security v.1.1 - 2026-01-27
 
 You can now choose whether the database notification should also be sent to the user's email address.
