@@ -24,4 +24,9 @@ return new class extends Migration
             $table->index('has_issues');
         });
     }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('security_audits');
+    }
 };
