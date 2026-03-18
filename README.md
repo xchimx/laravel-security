@@ -9,6 +9,7 @@
 
 A Laravel package for automated monitoring of security vulnerabilities and outdated packages in Composer and NPM dependencies.
 
+> ⚠️ **ABANDONED:** This branch is for Laravel 10 and is no longer maintained. Please upgrade to the latest version.
 ## Installation
 
 You can install the package via composer:
@@ -28,6 +29,12 @@ You can publish the config file with:
 
 ```bash
 php artisan vendor:publish --tag="security-config"
+```
+
+You can publish the views, or you add this line to your app.css:
+
+```css
+@source '../../../../vendor/xchimx/laravel-security/resources/views/**/*.blade.php';
 ```
 
 Customize the `config/security.php` file according to your requirements or set the corresponding ENV variables:
