@@ -4,6 +4,7 @@ namespace Xchimx\LaravelSecurity\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -14,9 +15,9 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $outdated_count
  * @property bool $has_issues
  * @property string|null $raw_output
- * @property \Illuminate\Support\Carbon $executed_at
- * @property \Illuminate\Support\Carbon $created_at
- * @property \Illuminate\Support\Carbon $updated_at
+ * @property Carbon $executed_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class SecurityAudit extends Model
 {

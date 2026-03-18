@@ -2,11 +2,12 @@
 
 namespace Xchimx\LaravelSecurity\Commands\Concerns;
 
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Config;
 use Xchimx\LaravelSecurity\Models\SecurityAudit;
 
 /**
- * @mixin \Illuminate\Console\Command
+ * @mixin Command
  */
 trait RunsSecurityChecks
 {
