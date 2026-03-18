@@ -2,6 +2,16 @@
 
 All notable changes to `laravel-security` will be documented in this file.
 
+## Laravel-Security v.1.3 - 2026-03-18
+
+- adds migration up void
+- remove support for Laravel 10
+- adds support for Laravel 13
+- removes tailwind cdn
+- update dependencies
+- update readme
+- update run-tests.yml
+
 ## Laravel-Security v.1.2 - 2026-02-17
 
 - removes useless migration
