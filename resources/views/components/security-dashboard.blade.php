@@ -390,9 +390,3 @@
         @endif
     </div>
 </div>
-<script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
-<script>
-    tailwind.config = {
-        darkMode: 'class',
-    };
-</script>

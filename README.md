@@ -30,6 +30,12 @@ You can publish the config file with:
 php artisan vendor:publish --tag="security-config"
 ```
 
+You can publish the views, or you add this line to your app.css:
+
+```css
+@source '../../../../vendor/xchimx/laravel-security/resources/views/**/*.blade.php';
+```
+
 Customize the `config/security.php` file according to your requirements or set the corresponding ENV variables:
 
 ```env
@@ -185,7 +191,7 @@ The `security_audits` table stores:
 ## Requirements
 
 - PHP ^8.3
-- Laravel ^12.0
+- Laravel ^13.0
 - Composer (installed on the server)
 - NPM (Optional if NPM packages are to be checked)
 
