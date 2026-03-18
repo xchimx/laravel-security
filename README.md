@@ -30,6 +30,12 @@ You can publish the config file with:
 php artisan vendor:publish --tag="security-config"
 ```
 
+You can publish the views, or you add this line to your app.css:
+
+```css
+@source '../../../../vendor/xchimx/laravel-security/resources/views/**/*.blade.php';
+```
+
 Customize the `config/security.php` file according to your requirements or set the corresponding ENV variables:
 
 ```env
