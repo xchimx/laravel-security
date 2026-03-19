@@ -2,6 +2,14 @@
 
 All notable changes to `laravel-security` will be documented in this file.
 
+## Laravel-Security v.1.0.2 - 2026-03-19
+
+### Laravel 10 Version
+
+adds migration up void
+removes tailwind cdn
+update readme
+
 ## Laravel-Security v1.1.1 - 2026-03-19
 
 ### Laravel 11 Version
