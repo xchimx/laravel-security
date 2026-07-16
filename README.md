@@ -7,6 +7,9 @@
 
 ![](resources/images/logo.png)
 
+- [Schottstaedt](https://www.schottstaedt.net/)
+- [Detailed article about this package](https://www.schottstaedt.net/en/laravel-security-package)
+
 A Laravel package for automated monitoring of security vulnerabilities and outdated packages in Composer and NPM dependencies.
 
 ## Installation
