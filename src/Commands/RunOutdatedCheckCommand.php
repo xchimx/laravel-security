@@ -20,6 +20,8 @@ class RunOutdatedCheckCommand extends Command
 
     public function handle(OutdatedService $outdatedService, SecurityNotifier $notifier): int
     {
+        $this->resetCheckState();
+
         $this->info('Checking for outdated packages...');
 
         /** @var array<int, SecurityAudit> $results */
@@ -64,7 +66,7 @@ class RunOutdatedCheckCommand extends Command
             if ($notifier->sendOutdatedNotification($results)) {
                 $this->info('Notifications sent.');
             } else {
-                $this->info('Notifications skipped (no enabled channels).');
+                $this->info('Notifications skipped (no usable channels).');
             }
         }
 

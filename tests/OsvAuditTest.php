@@ -247,6 +247,26 @@ it('warns about a missing package lock without aborting the composer audit', fun
         ->assertSuccessful();
 });
 
+it('does not leak failure state into a subsequent run in the same process', function () {
+    Notification::fake();
+    config()->set('security.audit.npm', false);
+
+    writeComposerLock($this->workingDirectory, [
+        ['name' => 'vendor/package', 'version' => '2.0.0'],
+    ]);
+
+    Http::fake([
+        'api.osv.dev/*' => Http::sequence()
+            ->push('server error', 500)
+            ->push('server error', 500)
+            ->push(['results' => [[]]]),
+    ]);
+
+    $this->artisan('security:audit')->assertFailed();
+
+    $this->artisan('security:audit')->assertSuccessful();
+});
+
 it('reports an osv api failure as a command error instead of crashing', function () {
     Notification::fake();
     config()->set('security.audit.npm', false);

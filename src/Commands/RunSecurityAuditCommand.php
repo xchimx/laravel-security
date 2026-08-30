@@ -23,6 +23,8 @@ class RunSecurityAuditCommand extends Command
 
     public function handle(AuditService $auditService, SecurityNotifier $notifier): int
     {
+        $this->resetCheckState();
+
         $failOnThreshold = null;
         $failOnOption = $this->option('fail-on');
 
@@ -80,7 +82,7 @@ class RunSecurityAuditCommand extends Command
             if ($notifier->sendAuditNotification($results)) {
                 $this->info('Notifications sent.');
             } else {
-                $this->info('Notifications skipped (no enabled channels, below severity threshold, or no new findings).');
+                $this->info('Notifications skipped (no usable channels, below severity threshold, or no new findings).');
             }
         }
 

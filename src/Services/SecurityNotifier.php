@@ -17,7 +17,7 @@ class SecurityNotifier
     /**
      * @var array<int, string>
      */
-    private array $allowedChannels = ['mail', 'database', 'database_mail', 'slack'];
+    private array $allowedChannels = ['mail', 'database', 'slack'];
 
     /**
      * With only_new enabled the severity threshold applies to the new

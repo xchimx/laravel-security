@@ -54,7 +54,7 @@ return [
         'middleware' => array_filter(array_map(
             'trim',
             explode(',', (string) env('SECURITY_ROUTES_MIDDLEWARE', 'web,auth'))
-        )),
+        )) ?: ['web', 'auth'],
     ],
 
     /*

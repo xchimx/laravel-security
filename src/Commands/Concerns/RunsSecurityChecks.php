@@ -17,6 +17,16 @@ trait RunsSecurityChecks
     protected bool $checkFailed = false;
 
     /**
+     * Command instances are reused within long-lived processes (Octane,
+     * repeated Artisan::call), so the per-run state must be reset explicitly.
+     */
+    protected function resetCheckState(): void
+    {
+        $this->sourceUnavailable = false;
+        $this->checkFailed = false;
+    }
+
+    /**
      * Executes a security check (npm or composer) and returns the result.
      *
      * @template TResult of SecurityAudit

@@ -160,6 +160,8 @@ php artisan security:audit --fail-on=high --no-notifications
 
 `--fail-on` accepts `low`, `medium`, `high` or `critical` and exits with code 1 when a vulnerability at or above the given severity is found. Vulnerabilities with an unknown severity always count as a match, and the run also fails when an enabled audit source is not available.
 
+Note when combining `--no-notifications` with `SECURITY_NOTIFY_ONLY_NEW=true`: every stored audit advances the "new vulnerabilities" baseline, so findings first seen by a `--no-notifications` run will count as known and will not trigger a later notification.
+
 ### Dashboard Component
 
 Integrate the Security Dashboard Component into your Blade views:
