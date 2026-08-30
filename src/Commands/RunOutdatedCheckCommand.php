@@ -4,15 +4,13 @@ namespace Xchimx\LaravelSecurity\Commands;
 
 use Illuminate\Console\Command;
 use Xchimx\LaravelSecurity\Commands\Concerns\RunsSecurityChecks;
-use Xchimx\LaravelSecurity\Commands\Concerns\SendsSecurityNotifications;
 use Xchimx\LaravelSecurity\Models\SecurityAudit;
-use Xchimx\LaravelSecurity\Notifications\OutdatedPackagesNotification;
 use Xchimx\LaravelSecurity\Services\OutdatedService;
+use Xchimx\LaravelSecurity\Services\SecurityNotifier;
 
 class RunOutdatedCheckCommand extends Command
 {
     use RunsSecurityChecks;
-    use SendsSecurityNotifications;
 
     protected $signature = 'security:outdated
                                 {--composer : Check only composer packages}
@@ -20,7 +18,7 @@ class RunOutdatedCheckCommand extends Command
 
     protected $description = 'Check for outdated composer and npm packages';
 
-    public function handle(OutdatedService $outdatedService): int
+    public function handle(OutdatedService $outdatedService, SecurityNotifier $notifier): int
     {
         $this->info('Checking for outdated packages...');
 
@@ -63,14 +61,15 @@ class RunOutdatedCheckCommand extends Command
         $hasOutdated = collect($results)->contains('has_issues', true);
 
         if ($hasOutdated && count($results) > 0) {
-            $this->info('Sending notifications...');
-            $this->sendConfiguredNotifications(
-                fn (array $channels) => new OutdatedPackagesNotification($results, $channels)
-            );
+            if ($notifier->sendOutdatedNotification($results)) {
+                $this->info('Notifications sent.');
+            } else {
+                $this->info('Notifications skipped (no enabled channels).');
+            }
         }
 
         $this->info('Outdated check completed!');
 
-        return self::SUCCESS;
+        return $this->checkFailed ? self::FAILURE : self::SUCCESS;
     }
 }

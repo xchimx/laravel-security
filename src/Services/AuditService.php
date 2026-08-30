@@ -7,11 +7,20 @@ use Xchimx\LaravelSecurity\Models\SecurityAudit;
 
 class AuditService
 {
+    public function __construct(
+        protected LockfileParser $lockfileParser,
+        protected OsvClient $osvClient,
+    ) {}
+
     /**
      * Run composer audit
      */
     public function runComposerAudit(): SecurityAudit
     {
+        if ($this->usesApiDriver()) {
+            return $this->runComposerAuditViaApi();
+        }
+
         $result = Process::run('composer audit --format=json');
 
         $output = $result->output();
@@ -68,6 +77,10 @@ class AuditService
      */
     public function runNpmAudit(): SecurityAudit
     {
+        if ($this->usesApiDriver()) {
+            return $this->runNpmAuditViaApi();
+        }
+
         $result = Process::run('npm audit --json');
 
         $output = $result->output();
@@ -120,22 +133,80 @@ class AuditService
     }
 
     /**
-     * Check if composer is available
+     * Check if the composer audit source is available. With the API driver
+     * this only requires a composer.lock file instead of the composer binary.
      */
     public function isComposerAvailable(): bool
     {
+        if ($this->usesApiDriver()) {
+            return is_file($this->workingDirectory().DIRECTORY_SEPARATOR.'composer.lock');
+        }
+
         $result = Process::run('composer --version');
 
         return $result->successful();
     }
 
     /**
-     * Check if npm is available
+     * Check if the npm audit source is available. With the API driver
+     * this only requires a package-lock.json file instead of the npm binary.
      */
     public function isNpmAvailable(): bool
     {
+        if ($this->usesApiDriver()) {
+            return is_file($this->workingDirectory().DIRECTORY_SEPARATOR.'package-lock.json');
+        }
+
         $result = Process::run('npm --version');
 
         return $result->successful();
+    }
+
+    protected function runComposerAuditViaApi(): SecurityAudit
+    {
+        $packages = $this->lockfileParser->composerPackages($this->workingDirectory());
+        $vulnerabilities = $this->osvClient->findVulnerabilities($packages, 'Packagist');
+
+        return SecurityAudit::create([
+            'type' => 'audit',
+            'source' => 'composer',
+            'results' => $vulnerabilities,
+            'vulnerabilities_count' => count($vulnerabilities),
+            'has_issues' => count($vulnerabilities) > 0,
+            'raw_output' => (string) json_encode($vulnerabilities),
+            'executed_at' => now(),
+        ]);
+    }
+
+    protected function runNpmAuditViaApi(): SecurityAudit
+    {
+        $packages = $this->lockfileParser->npmPackages($this->workingDirectory());
+        $vulnerabilities = $this->osvClient->findVulnerabilities($packages, 'npm');
+
+        return SecurityAudit::create([
+            'type' => 'audit',
+            'source' => 'npm',
+            'results' => $vulnerabilities,
+            'vulnerabilities_count' => count($vulnerabilities),
+            'has_issues' => count($vulnerabilities) > 0,
+            'raw_output' => (string) json_encode($vulnerabilities),
+            'executed_at' => now(),
+        ]);
+    }
+
+    protected function usesApiDriver(): bool
+    {
+        return config('security.audit.driver', 'cli') === 'api';
+    }
+
+    protected function workingDirectory(): string
+    {
+        $configured = config('security.audit.working_directory');
+
+        if (is_string($configured) && $configured !== '') {
+            return $configured;
+        }
+
+        return base_path();
     }
 }
