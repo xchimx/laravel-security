@@ -3,8 +3,11 @@
 namespace Xchimx\LaravelSecurity\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Xchimx\LaravelSecurity\Database\Factories\SecurityAuditFactory;
+use Xchimx\LaravelSecurity\Support\Severity;
 
 /**
  * @property int $id
@@ -21,6 +24,9 @@ use Illuminate\Support\Carbon;
  */
 class SecurityAudit extends Model
 {
+    /** @use HasFactory<SecurityAuditFactory> */
+    use HasFactory;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -114,6 +120,28 @@ class SecurityAudit extends Model
     public function scopeLatest(Builder $query): Builder
     {
         return $query->orderBy('executed_at', 'desc');
+    }
+
+    protected static function newFactory(): SecurityAuditFactory
+    {
+        return SecurityAuditFactory::new();
+    }
+
+    /**
+     * Determine if any recorded vulnerability meets the given severity threshold.
+     */
+    public function hasVulnerabilityMeeting(Severity $threshold): bool
+    {
+        foreach ($this->results ?? [] as $vulnerability) {
+            $severityValue = $vulnerability['severity'] ?? null;
+            $severity = Severity::fromString(is_string($severityValue) ? $severityValue : null);
+
+            if ($severity->meetsThreshold($threshold)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -48,6 +48,7 @@ SECURITY_AUDIT_ENABLED=true
 SECURITY_AUDIT_TIME=02:00
 SECURITY_AUDIT_COMPOSER=true
 SECURITY_AUDIT_NPM=true
+SECURITY_AUDIT_DRIVER=cli
 
 # Outdated Checks
 SECURITY_OUTDATED_ENABLED=true
@@ -63,9 +64,19 @@ SECURITY_NOTIFY_MAIL=true
 SECURITY_NOTIFY_DATABASE=true
 SECURITY_NOTIFY_DATABASE_MAIL=false
 SECURITY_NOTIFY_SLACK=false
+SECURITY_NOTIFY_MIN_SEVERITY=low
+SECURITY_NOTIFY_ONLY_NEW=false
 SECURITY_MAIL_TO=admin@example.com
 SLACK_BOT_USER_OAUTH_TOKEN=xxx-xxx-xxx
 SLACK_BOT_USER_DEFAULT_CHANNEL="#security-alerts"
+
+# Routes
+SECURITY_ROUTES_MIDDLEWARE=web,auth
+
+# Storage
+SECURITY_RETENTION_DAYS=90
+SECURITY_PRUNE_ENABLED=true
+SECURITY_PRUNE_TIME=04:00
 ```
 
 Optionally, you can publish the views using
@@ -74,12 +85,21 @@ Optionally, you can publish the views using
 php artisan vendor:publish --tag="security-views"
 ```
 
+Optionally, you can publish the translations (English and German included, English is the default) using
+
+```bash
+php artisan vendor:publish --tag="security-translations"
+```
+
+Notifications and the dashboard follow the application locale (`config('app.locale')`). Locales without translations fall back to the application's fallback locale (`config('app.fallback_locale')`, English by default).
+
 ## Usage
 
 The package automatically registers the following tasks in the Laravel Scheduler:
 
 - **Security Audit**: Daily at 02:00 (configurable)
 - **Outdated Check**: Weekly on Mondays at 3:00 a.m. (configurable)
+- **Prune**: Daily at 04:00 (configurable), deletes audit records older than `SECURITY_RETENTION_DAYS` days
 
 Ensure that the Laravel Scheduler is running:
 
@@ -107,7 +127,35 @@ php artisan security:outdated --composer
 
 # Check NPM only
 php artisan security:outdated --npm
+
+# Prune audit records older than the retention period
+php artisan security:prune
 ```
+
+### Shared hosting / audits without CLI binaries
+
+By default the audit runs the `composer audit` and `npm audit` binaries. On servers without these binaries (e.g. shared hosting) you can switch to the API driver, which reads `composer.lock` / `package-lock.json` and queries the [OSV.dev](https://osv.dev) vulnerability database instead:
+
+```env
+SECURITY_AUDIT_DRIVER=api
+```
+
+Notes on the API driver:
+
+- Requires outgoing HTTPS to `api.osv.dev`.
+- The lockfiles are expected in `base_path()`; a different directory can be set via `SECURITY_AUDIT_WORKING_DIRECTORY`.
+- Development versions (`dev-main`, `1.x-dev`) cannot be matched and are skipped (logged).
+- `package-lock.json` must use the v2/v3 format (npm 7+).
+
+### CI usage
+
+In CI pipelines the audit can fail the build and skip notifications:
+
+```bash
+php artisan security:audit --fail-on=high --no-notifications
+```
+
+`--fail-on` accepts `low`, `medium`, `high` or `critical` and exits with code 1 when a vulnerability at or above the given severity is found. Vulnerabilities with an unknown severity always count as a match, and the run also fails when an enabled audit source is not available.
 
 ### Dashboard Component
 
@@ -116,6 +164,14 @@ Integrate the Security Dashboard Component into your Blade views:
 ```blade
 <x-security-security-dashboard />
 ```
+
+The dashboard buttons post to package routes that trigger audit runs. These routes use the `web` and `auth` middleware by default; adjust via:
+
+```env
+SECURITY_ROUTES_MIDDLEWARE=web,auth
+```
+
+Note: the Blade component itself is rendered by your own route — protect that page with your own middleware. Prior to this version the package routes were unauthenticated; the `auth` default is a deliberate breaking change.
 
 ### Programmatic Access
 
@@ -175,6 +231,26 @@ SLACK_BOT_USER_OAUTH_TOKEN=xxx-xxx-xxx
 SLACK_BOT_USER_DEFAULT_CHANNEL="#security-alerts"
 ```
 
+### Severity threshold
+
+Audit notifications can be limited to findings with a minimum severity (`low`, `medium`, `high`, `critical`):
+
+```env
+SECURITY_NOTIFY_MIN_SEVERITY=high
+```
+
+Audit results are always stored in the database; the threshold only controls whether a notification is sent. Vulnerabilities with an unknown severity always trigger a notification.
+
+### Only notify about new vulnerabilities
+
+By default every audit with findings sends a notification, even when nothing changed since the last run. To only get notified when *new* vulnerabilities appear (compared to the previous audit of the same source):
+
+```env
+SECURITY_NOTIFY_ONLY_NEW=true
+```
+
+Notifications then list the new findings in detail and add a counter for known vulnerabilities that are still open. Vulnerabilities are matched by CVE, or by package + title when no CVE is available. When combined with `SECURITY_NOTIFY_MIN_SEVERITY`, the threshold applies to the new findings.
+
 ## Data model
 
 The `security_audits` table stores:
@@ -192,8 +268,8 @@ The `security_audits` table stores:
 
 - PHP ^8.3
 - Laravel ^12.0
-- Composer (installed on the server)
-- NPM (Optional if NPM packages are to be checked)
+- Composer (installed on the server; not required with `SECURITY_AUDIT_DRIVER=api`)
+- NPM (Optional if NPM packages are to be checked; not required with `SECURITY_AUDIT_DRIVER=api`)
 
 ## Testing
 

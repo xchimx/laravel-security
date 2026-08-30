@@ -4,24 +4,38 @@ namespace Xchimx\LaravelSecurity\Commands;
 
 use Illuminate\Console\Command;
 use Xchimx\LaravelSecurity\Commands\Concerns\RunsSecurityChecks;
-use Xchimx\LaravelSecurity\Commands\Concerns\SendsSecurityNotifications;
 use Xchimx\LaravelSecurity\Models\SecurityAudit;
-use Xchimx\LaravelSecurity\Notifications\SecurityAuditNotification;
 use Xchimx\LaravelSecurity\Services\AuditService;
+use Xchimx\LaravelSecurity\Services\SecurityNotifier;
+use Xchimx\LaravelSecurity\Support\Severity;
 
 class RunSecurityAuditCommand extends Command
 {
     use RunsSecurityChecks;
-    use SendsSecurityNotifications;
 
     protected $signature = 'security:audit
                                 {--composer : Run only composer audit}
-                                {--npm : Run only npm audit}';
+                                {--npm : Run only npm audit}
+                                {--fail-on= : Exit with code 1 when a vulnerability with this severity or higher is found (low, medium, high, critical)}
+                                {--no-notifications : Do not send notifications}';
 
     protected $description = 'Run security audit for composer and npm packages';
 
-    public function handle(AuditService $auditService): int
+    public function handle(AuditService $auditService, SecurityNotifier $notifier): int
     {
+        $failOnThreshold = null;
+        $failOnOption = $this->option('fail-on');
+
+        if (is_string($failOnOption) && $failOnOption !== '') {
+            $failOnThreshold = Severity::fromString($failOnOption);
+
+            if ($failOnThreshold === Severity::Unknown) {
+                $this->error("Invalid --fail-on value [{$failOnOption}]. Allowed values: low, medium, high, critical.");
+
+                return self::FAILURE;
+            }
+        }
+
         $this->info('Running security audit...');
 
         /** @var array<int, SecurityAudit> $results */
@@ -62,15 +76,42 @@ class RunSecurityAuditCommand extends Command
         // 3. Evaluate results and send notifications
         $hasIssues = collect($results)->contains('has_issues', true);
 
-        if ($hasIssues && count($results) > 0) {
-            $this->info('Sending notifications...');
-            $this->sendConfiguredNotifications(
-                fn (array $channels) => new SecurityAuditNotification($results, $channels)
-            );
+        if ($hasIssues && count($results) > 0 && ! $this->option('no-notifications')) {
+            if ($notifier->sendAuditNotification($results)) {
+                $this->info('Notifications sent.');
+            } else {
+                $this->info('Notifications skipped (no enabled channels, below severity threshold, or no new findings).');
+            }
         }
 
         $this->info('Security audit completed!');
 
-        return self::SUCCESS;
+        if ($failOnThreshold instanceof Severity && $this->hasVulnerabilityMeeting($results, $failOnThreshold)) {
+            $this->error("Failing: vulnerabilities at or above [{$failOnOption}] severity were found.");
+
+            return self::FAILURE;
+        }
+
+        if ($failOnThreshold instanceof Severity && $this->sourceUnavailable) {
+            $this->error('Failing: --fail-on is set but an enabled audit source was not available.');
+
+            return self::FAILURE;
+        }
+
+        return $this->checkFailed ? self::FAILURE : self::SUCCESS;
+    }
+
+    /**
+     * @param  array<int, SecurityAudit>  $results
+     */
+    protected function hasVulnerabilityMeeting(array $results, Severity $threshold): bool
+    {
+        foreach ($results as $result) {
+            if ($result->hasVulnerabilityMeeting($threshold)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
