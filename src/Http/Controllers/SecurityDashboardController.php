@@ -12,13 +12,13 @@ class SecurityDashboardController extends Controller
     {
         Artisan::call('security:audit');
 
-        return back()->with('status', 'Security audit done!');
+        return back()->with('status', __('security::dashboard.flash_audit_done'));
     }
 
     public function checkOutdated(): RedirectResponse
     {
         Artisan::call('security:outdated');
 
-        return back()->with('status', 'Outdated packages check done!');
+        return back()->with('status', __('security::dashboard.flash_outdated_done'));
     }
 }
