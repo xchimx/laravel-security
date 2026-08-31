@@ -2,6 +2,31 @@
 
 All notable changes to `laravel-security` will be documented in this file.
 
+## Laravel-Security v.1.3.1 - 2026-08-31
+
+### ⚠️ Breaking / behavior changes
+
+- The package routes (`security.run-audit`, `security.run-outdated`) now require the `web,auth` middleware by default. Configurable via `SECURITY_ROUTES_MIDDLEWARE`.
+- Pruning is enabled by default: audit records older than `SECURITY_RETENTION_DAYS` (90) are deleted starting with the first scheduled run. Set `SECURITY_PRUNE_ENABLED=false` or `SECURITY_RETENTION_DAYS=0` to opt out.
+- `AuditService` now has constructor dependencies — resolve it via the container instead of `new AuditService()`.
+- If you published the config file, re-publish it to get the new keys: `php artisan vendor:publish --tag="security-config" --force`
+
+### New features
+
+- `security:prune` command with a daily schedule honoring `SECURITY_RETENTION_DAYS`
+- English/German translations for notifications and the dashboard (`vendor:publish --tag="security-translations"`)
+- `SECURITY_NOTIFY_MIN_SEVERITY`: only notify for findings at or above a severity threshold
+- CI mode: `security:audit --fail-on=<severity>` (exit 1, fails closed on unavailable sources) and `--no-notifications`
+- `SECURITY_NOTIFY_ONLY_NEW`: only notify when new vulnerabilities appeared vs. the previous audit, with a "still open" counter
+- OSV.dev API driver (`SECURITY_AUDIT_DRIVER=api`): audits lockfiles without the composer/npm binaries — ideal for shared hosting
+- `security:audit` prints the active driver; dashboard buttons show a loading spinner
+
+### Fixes
+
+- Notification dispatch consolidated into a `SecurityNotifier` service (identical channel behavior)
+- Stale per-run state on reused command instances no longer fails later runs in long-lived processes
+- Empty `SECURITY_ROUTES_MIDDLEWARE` falls back to `web,auth` instead of removing all middleware
+
 ## Laravel-Security v1.2.2 - 2026-08-31
 
 ### ⚠️ Breaking / behavior changes
