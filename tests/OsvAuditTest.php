@@ -242,6 +242,7 @@ it('warns about a missing package lock without aborting the composer audit', fun
     ]);
 
     $this->artisan('security:audit')
+        ->expectsOutputToContain('Using audit driver [api].')
         ->expectsOutputToContain('No vulnerabilities found in composer packages')
         ->expectsOutputToContain('Npm is not available')
         ->assertSuccessful();

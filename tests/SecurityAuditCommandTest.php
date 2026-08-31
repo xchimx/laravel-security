@@ -32,7 +32,9 @@ it('keeps exit code zero without the fail-on option', function () {
     Notification::fake();
     fakeComposerAudit('critical');
 
-    $this->artisan('security:audit')->assertSuccessful();
+    $this->artisan('security:audit')
+        ->expectsOutputToContain('Using audit driver [cli].')
+        ->assertSuccessful();
 
     Notification::assertSentOnDemand(SecurityAuditNotification::class);
 });

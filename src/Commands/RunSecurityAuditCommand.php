@@ -39,6 +39,7 @@ class RunSecurityAuditCommand extends Command
         }
 
         $this->info('Running security audit...');
+        $this->info(sprintf('Using audit driver [%s].', config('security.audit.driver', 'cli')));
 
         /** @var array<int, SecurityAudit> $results */
         $results = [];
