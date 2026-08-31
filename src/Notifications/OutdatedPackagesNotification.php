@@ -37,18 +37,20 @@ class OutdatedPackagesNotification extends Notification
         $appName = (string) config('app.name');
 
         $message = (new MailMessage)
-            ->subject("📦 Outdated Packages Report - {$appName}")
-            ->greeting("Package Update Report for {$appName}")
-            ->line("We found **{$totalOutdated} outdated packages** in your application dependencies.");
+            ->subject(__('security::notifications.outdated.subject', ['app' => $appName]))
+            ->greeting(__('security::notifications.outdated.greeting', ['app' => $appName]))
+            ->line(__('security::notifications.outdated.summary', ['count' => $totalOutdated]));
 
         foreach ($this->results as $result) {
             if (! $result->has_issues || ! is_array($result->results)) {
                 continue;
             }
 
-            $message->line("**{$result->source}**: {$result->outdated_count} outdated packages");
+            $message->line(__('security::notifications.outdated.source_summary', [
+                'source' => $result->source,
+                'count' => $result->outdated_count,
+            ]));
 
-            // Add first 5 outdated packages
             $resultsData = $result->results ?? [];
             $packages = array_slice($resultsData, 0, 5);
             foreach ($packages as $pkg) {
@@ -60,13 +62,12 @@ class OutdatedPackagesNotification extends Notification
 
             if (count($resultsData) > 5) {
                 $remaining = count($resultsData) - 5;
-                $message->line("... and {$remaining} more packages");
+                $message->line(__('security::notifications.outdated.more', ['count' => $remaining]));
             }
         }
 
-        $appRoute = $this->dashboardUrl();
-        $message->action('View Full Report', $appRoute)
-            ->line('Consider updating these packages to their latest versions.');
+        $message->action(__('security::notifications.outdated.action'), $this->dashboardUrl())
+            ->line(__('security::notifications.outdated.footer'));
 
         return $message;
     }
@@ -78,10 +79,12 @@ class OutdatedPackagesNotification extends Notification
         $appRoute = $this->dashboardUrl();
 
         $message = (new SlackMessage)
-            ->text("📦 Outdated packages detected in {$appName}")
-            ->headerBlock("📦 Outdated Packages Report - {$appName}")
+            ->text(__('security::notifications.outdated.slack_text', ['app' => $appName]))
+            ->headerBlock(__('security::notifications.outdated.slack_header', ['app' => $appName]))
             ->sectionBlock(function (SectionBlock $block) use ($totalOutdated, $appRoute) {
-                $block->text("We found *{$totalOutdated} outdated packages* in your application dependencies.\n<{$appRoute}|View Full Dashboard>")
+                $summary = __('security::notifications.outdated.slack_summary', ['count' => $totalOutdated]);
+                $dashboardLabel = __('security::notifications.view_dashboard');
+                $block->text("{$summary}\n<{$appRoute}|{$dashboardLabel}>")
                     ->markdown();
             });
 
@@ -92,9 +95,10 @@ class OutdatedPackagesNotification extends Notification
 
             $message->dividerBlock();
             $message->sectionBlock(function (SectionBlock $block) use ($result) {
-                $sourceName = ucfirst($result->source);
-                $block->text("*{$sourceName}*: {$result->outdated_count} outdated packages")
-                    ->markdown();
+                $block->text(__('security::notifications.outdated.slack_source_summary', [
+                    'source' => ucfirst($result->source),
+                    'count' => $result->outdated_count,
+                ]))->markdown();
             });
 
             $resultsData = $result->results ?? [];
@@ -111,7 +115,7 @@ class OutdatedPackagesNotification extends Notification
 
             if (count($resultsData) > 5) {
                 $remaining = count($resultsData) - 5;
-                $packageList .= "... and {$remaining} more packages";
+                $packageList .= __('security::notifications.outdated.more', ['count' => $remaining]);
             }
 
             $message->sectionBlock(function (SectionBlock $block) use ($packageList) {
@@ -120,7 +124,7 @@ class OutdatedPackagesNotification extends Notification
         }
 
         $message->contextBlock(function ($block) {
-            $block->text('Consider updating these packages to their latest versions.');
+            $block->text(__('security::notifications.outdated.footer'));
         });
 
         return $message;
@@ -146,22 +150,6 @@ class OutdatedPackagesNotification extends Notification
             }, $this->results),
             'url' => $this->dashboardUrl(),
         ];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    protected function getSlackFields(): array
-    {
-        $fields = [];
-
-        foreach ($this->results as $result) {
-            if ($result->has_issues) {
-                $fields[$result->source] = "{$result->outdated_count} outdated packages";
-            }
-        }
-
-        return $fields;
     }
 
     private function dashboardUrl(): string

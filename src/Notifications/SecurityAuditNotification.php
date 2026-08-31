@@ -9,6 +9,7 @@ use Illuminate\Notifications\Slack\BlockKit\Blocks\SectionBlock;
 use Illuminate\Notifications\Slack\SlackMessage;
 use Illuminate\Support\Facades\Route;
 use Xchimx\LaravelSecurity\Models\SecurityAudit;
+use Xchimx\LaravelSecurity\Support\AuditDiff;
 
 class SecurityAuditNotification extends Notification
 {
@@ -17,10 +18,12 @@ class SecurityAuditNotification extends Notification
     /**
      * @param  array<int, SecurityAudit>  $results
      * @param  array<string>  $channels
+     * @param  array<string, AuditDiff>  $diffs  keyed by audit source
      */
     public function __construct(
         protected array $results,
-        protected array $channels = ['mail', 'database', 'slack']
+        protected array $channels = ['mail', 'database', 'slack'],
+        protected array $diffs = []
     ) {}
 
     /**
@@ -38,36 +41,51 @@ class SecurityAuditNotification extends Notification
 
         $message = (new MailMessage)
             ->error()
-            ->subject("🔒 Security Vulnerabilities Detected - {$appName}")
-            ->greeting("Security Alert for {$appName}")
-            ->line("We have detected **{$totalVulnerabilities} security vulnerabilities** in your application dependencies.");
+            ->subject(__('security::notifications.audit.subject', ['app' => $appName]))
+            ->greeting(__('security::notifications.audit.greeting', ['app' => $appName]))
+            ->line(__('security::notifications.audit.summary', ['count' => $totalVulnerabilities]));
 
         foreach ($this->results as $result) {
             if (! $result->has_issues || ! is_array($result->results)) {
                 continue;
             }
 
-            $message->line("**{$result->source}**: {$result->vulnerabilities_count} vulnerabilities found");
+            $diff = $this->diffs[$result->source] ?? null;
 
-            // Add first 5 vulnerabilities
-            $resultsData = $result->results ?? [];
-            $packages = array_slice($resultsData, 0, 5);
-            foreach ($packages as $pkg) {
-                $severity = is_string($pkg['severity'] ?? null) ? $pkg['severity'] : 'unknown';
-                $package = is_string($pkg['package'] ?? null) ? $pkg['package'] : 'unknown';
-                $title = is_string($pkg['title'] ?? null) ? $pkg['title'] : 'unknown vulnerability';
+            if ($diff instanceof AuditDiff) {
+                $message->line(__('security::notifications.audit.source_summary_new', [
+                    'source' => $result->source,
+                    'count' => count($diff->new),
+                ]));
+                $vulnerabilities = $diff->new;
+            } else {
+                $message->line(__('security::notifications.audit.source_summary', [
+                    'source' => $result->source,
+                    'count' => $result->vulnerabilities_count,
+                ]));
+                $vulnerabilities = $result->results;
+            }
+
+            $packages = array_slice($vulnerabilities, 0, 5);
+            foreach ($packages as $vulnerability) {
+                $severity = is_string($vulnerability['severity'] ?? null) ? $vulnerability['severity'] : 'unknown';
+                $package = is_string($vulnerability['package'] ?? null) ? $vulnerability['package'] : 'unknown';
+                $title = is_string($vulnerability['title'] ?? null) ? $vulnerability['title'] : 'unknown vulnerability';
                 $message->line("- [{$severity}] {$package}: {$title}");
             }
 
-            if (count($resultsData) > 5) {
-                $remaining = count($resultsData) - 5;
-                $message->line("... and {$remaining} more vulnerabilities");
+            if (count($vulnerabilities) > 5) {
+                $remaining = count($vulnerabilities) - 5;
+                $message->line(__('security::notifications.audit.more', ['count' => $remaining]));
+            }
+
+            if ($diff instanceof AuditDiff && count($diff->known) > 0) {
+                $message->line(__('security::notifications.audit.still_open', ['count' => count($diff->known)]));
             }
         }
 
-        $appRoute = $this->dashboardUrl();
-        $message->action('View Full Report', $appRoute)
-            ->line('Please review and update the affected packages as soon as possible.');
+        $message->action(__('security::notifications.audit.action'), $this->dashboardUrl())
+            ->line(__('security::notifications.audit.footer'));
 
         return $message;
     }
@@ -79,10 +97,12 @@ class SecurityAuditNotification extends Notification
         $appRoute = $this->dashboardUrl();
 
         $message = (new SlackMessage)
-            ->text("🔒 Security vulnerabilities detected in {$appName}")
-            ->headerBlock("🔒 Security Alert - {$appName}")
+            ->text(__('security::notifications.audit.slack_text', ['app' => $appName]))
+            ->headerBlock(__('security::notifications.audit.slack_header', ['app' => $appName]))
             ->sectionBlock(function (SectionBlock $block) use ($totalVulnerabilities, $appRoute) {
-                $block->text("We have detected *{$totalVulnerabilities} security vulnerabilities* in your application dependencies.\n<{$appRoute}|View Full Dashboard>")
+                $summary = __('security::notifications.audit.slack_summary', ['count' => $totalVulnerabilities]);
+                $dashboardLabel = __('security::notifications.view_dashboard');
+                $block->text("{$summary}\n<{$appRoute}|{$dashboardLabel}>")
                     ->markdown();
             });
 
@@ -91,21 +111,32 @@ class SecurityAuditNotification extends Notification
                 continue;
             }
 
+            $diff = $this->diffs[$result->source] ?? null;
+
             $message->dividerBlock();
-            $message->sectionBlock(function (SectionBlock $block) use ($result) {
-                $sourceName = ucfirst($result->source);
-                $block->text("*{$sourceName}*: {$result->vulnerabilities_count} vulnerabilities found")
-                    ->markdown();
+            $message->sectionBlock(function (SectionBlock $block) use ($result, $diff) {
+                if ($diff instanceof AuditDiff) {
+                    $block->text(__('security::notifications.audit.slack_source_summary_new', [
+                        'source' => ucfirst($result->source),
+                        'count' => count($diff->new),
+                    ]))->markdown();
+                } else {
+                    $block->text(__('security::notifications.audit.slack_source_summary', [
+                        'source' => ucfirst($result->source),
+                        'count' => $result->vulnerabilities_count,
+                    ]))->markdown();
+                }
             });
 
-            $resultsData = $result->results ?? [];
-            $packages = array_slice($resultsData, 0, 5);
+            $vulnerabilities = $diff instanceof AuditDiff ? $diff->new : ($result->results ?? []);
+
+            $packages = array_slice($vulnerabilities, 0, 5);
             $vulnList = '';
 
-            foreach ($packages as $vuln) {
-                $severity = is_string($vuln['severity'] ?? null) ? $vuln['severity'] : 'unknown';
-                $package = is_string($vuln['package'] ?? null) ? $vuln['package'] : 'unknown';
-                $title = is_string($vuln['title'] ?? null) ? $vuln['title'] : 'unknown vulnerability';
+            foreach ($packages as $vulnerability) {
+                $severity = is_string($vulnerability['severity'] ?? null) ? $vulnerability['severity'] : 'unknown';
+                $package = is_string($vulnerability['package'] ?? null) ? $vulnerability['package'] : 'unknown';
+                $title = is_string($vulnerability['title'] ?? null) ? $vulnerability['title'] : 'unknown vulnerability';
 
                 $emoji = match (strtolower($severity)) {
                     'critical', 'high' => '🔴',
@@ -116,18 +147,25 @@ class SecurityAuditNotification extends Notification
                 $vulnList .= "{$emoji} *[{$severity}]* `{$package}`: {$title}\n";
             }
 
-            if (count($resultsData) > 5) {
-                $remaining = count($resultsData) - 5;
-                $vulnList .= "... and {$remaining} more vulnerabilities";
+            if (count($vulnerabilities) > 5) {
+                $remaining = count($vulnerabilities) - 5;
+                $vulnList .= __('security::notifications.audit.more', ['count' => $remaining]);
             }
 
-            $message->sectionBlock(function (SectionBlock $block) use ($vulnList) {
-                $block->text($vulnList)->markdown();
-            });
+            if ($diff instanceof AuditDiff && count($diff->known) > 0) {
+                $stillOpen = __('security::notifications.audit.still_open', ['count' => count($diff->known)]);
+                $vulnList .= ($vulnList !== '' ? "\n" : '').$stillOpen;
+            }
+
+            if ($vulnList !== '') {
+                $message->sectionBlock(function (SectionBlock $block) use ($vulnList) {
+                    $block->text($vulnList)->markdown();
+                });
+            }
         }
 
         $message->contextBlock(function ($block) {
-            $block->text('Please review and update the affected packages as soon as possible.');
+            $block->text(__('security::notifications.audit.footer'));
         });
 
         return $message;
@@ -145,30 +183,18 @@ class SecurityAuditNotification extends Notification
             'app_name' => config('app.name'),
             'total_vulnerabilities' => $totalVulnerabilities,
             'results' => array_map(function (SecurityAudit $result): array {
+                $diff = $this->diffs[$result->source] ?? null;
+
                 return [
                     'source' => $result->source,
                     'vulnerabilities_count' => $result->vulnerabilities_count,
                     'packages' => $result->results,
+                    'new_count' => $diff instanceof AuditDiff ? count($diff->new) : null,
+                    'known_count' => $diff instanceof AuditDiff ? count($diff->known) : null,
                 ];
             }, $this->results),
             'url' => $this->dashboardUrl(),
         ];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    protected function getSlackFields(): array
-    {
-        $fields = [];
-
-        foreach ($this->results as $result) {
-            if ($result->has_issues) {
-                $fields[$result->source] = "{$result->vulnerabilities_count} vulnerabilities";
-            }
-        }
-
-        return $fields;
     }
 
     private function dashboardUrl(): string

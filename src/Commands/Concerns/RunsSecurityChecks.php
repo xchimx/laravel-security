@@ -4,6 +4,7 @@ namespace Xchimx\LaravelSecurity\Commands\Concerns;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Config;
+use RuntimeException;
 use Xchimx\LaravelSecurity\Models\SecurityAudit;
 
 /**
@@ -11,6 +12,20 @@ use Xchimx\LaravelSecurity\Models\SecurityAudit;
  */
 trait RunsSecurityChecks
 {
+    protected bool $sourceUnavailable = false;
+
+    protected bool $checkFailed = false;
+
+    /**
+     * Command instances are reused within long-lived processes (Octane,
+     * repeated Artisan::call), so the per-run state must be reset explicitly.
+     */
+    protected function resetCheckState(): void
+    {
+        $this->sourceUnavailable = false;
+        $this->checkFailed = false;
+    }
+
     /**
      * Executes a security check (npm or composer) and returns the result.
      *
@@ -48,15 +63,22 @@ trait RunsSecurityChecks
 
         // Check if the tool is available (e.g., is npm installed?)
         if (! $availabilityCheck()) {
-            $this->warn(ucfirst($tool).' is not available');
+            $this->sourceUnavailable = true;
+            $this->warn(ucfirst($tool).' is not available (binary or lockfile missing)');
 
             return null;
         }
 
         $this->info($processMsg);
 
-        // Execute the callback
-        $result = $executionCallback();
+        try {
+            $result = $executionCallback();
+        } catch (RuntimeException $exception) {
+            $this->checkFailed = true;
+            $this->error(ucfirst($tool).' check failed: '.$exception->getMessage());
+
+            return null;
+        }
 
         // Evaluate the result
         if ($result->has_issues) {
